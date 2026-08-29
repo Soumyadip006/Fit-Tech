@@ -1,0 +1,20 @@
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment & Virtualenv
+venv/
+ENV/
+env/
+.env
+
+# Backend uploads & temporary video files
+backend/uploads/*
+!backend/uploads/.gitkeep
+videos/
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
