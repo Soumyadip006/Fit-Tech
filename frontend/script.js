@@ -2,7 +2,9 @@
 // FORMIQ — FRONTEND JAVASCRIPT APP LOGIC
 // ============================================================
 
-const API_BASE = 'http://127.0.0.1:5000/api';
+// Dynamic API Host Detection (works on localhost, 127.0.0.1, or network IP)
+const API_HOST = window.location.hostname || '127.0.0.1';
+const API_BASE = `http://${API_HOST}:5000/api`;
 
 // DOM Elements
 const serverStatusDot = document.getElementById('serverStatusDot');
