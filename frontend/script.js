@@ -2,9 +2,9 @@
 // FORMIQ — FRONTEND JAVASCRIPT APP LOGIC
 // ============================================================
 
-// Dynamic API Host Detection (works on localhost, 127.0.0.1, or network IP)
-const API_HOST = window.location.hostname || '127.0.0.1';
-const API_BASE = `http://${API_HOST}:5000/api`;
+// Dynamic API Host Detection (attempts current hostname, 127.0.0.1, and localhost)
+let activeApiHost = window.location.hostname && window.location.hostname !== '' ? window.location.hostname : '127.0.0.1';
+let API_BASE = `http://${activeApiHost}:5000/api`;
 
 // DOM Elements
 const serverStatusDot = document.getElementById('serverStatusDot');
@@ -31,36 +31,53 @@ let selectedFile = null;
 let selectedSampleName = null;
 
 // Initialize App
-document.addEventListener('DOMContentLoaded', () => {
-  checkApiHealth();
+document.addEventListener('DOMContentLoaded', async () => {
+  await resolveWorkingApiHost();
   fetchSampleVideos();
   setupEventListeners();
 });
 
-// 1. API Health Check
-async function checkApiHealth() {
-  try {
-    const res = await fetch(`${API_BASE}/health`);
-    if (res.ok) {
-      serverStatusDot.classList.add('pulse');
-      serverStatusText.textContent = 'Backend Online';
-      serverStatusText.style.color = '#10B981';
-    } else {
-      throw new Error();
+// 1. Resolve & Test Working API Host
+async function resolveWorkingApiHost() {
+  const hostsToTry = [
+    window.location.hostname,
+    '127.0.0.1',
+    'localhost'
+  ].filter(Boolean);
+
+  // Remove duplicates
+  const uniqueHosts = [...new Set(hostsToTry)];
+
+  for (const host of uniqueHosts) {
+    try {
+      const testUrl = `http://${host}:5000/api/health`;
+      const res = await fetch(testUrl, { method: 'GET', signal: AbortSignal.timeout(3000) });
+      if (res.ok) {
+        activeApiHost = host;
+        API_BASE = `http://${host}:5000/api`;
+        serverStatusDot.classList.add('pulse');
+        serverStatusText.textContent = 'Backend Online';
+        serverStatusText.style.color = '#10B981';
+        return true;
+      }
+    } catch (err) {
+      // try next
     }
-  } catch (err) {
-    serverStatusDot.classList.remove('pulse');
-    serverStatusDot.style.backgroundColor = '#EF4444';
-    serverStatusText.textContent = 'Backend Offline';
-    serverStatusText.style.color = '#EF4444';
   }
+
+  // If all fail
+  serverStatusDot.classList.remove('pulse');
+  serverStatusDot.style.backgroundColor = '#EF4444';
+  serverStatusText.textContent = 'Backend Offline';
+  serverStatusText.style.color = '#EF4444';
+  return false;
 }
 
 // 2. Fetch Sample Videos
 async function fetchSampleVideos() {
   try {
-    const res = await fetch(`${API_BASE}/samples`);
-    if (!res.ok) return;
+    const res = await fetch(`${API_BASE}/samples`, { signal: AbortSignal.timeout(4000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     
     samplePills.innerHTML = '';
@@ -73,10 +90,11 @@ async function fetchSampleVideos() {
         samplePills.appendChild(btn);
       });
     } else {
-      samplePills.innerHTML = '<span style="font-size:0.8rem;color:#64748B;">No sample videos found</span>';
+      samplePills.innerHTML = '<span style="font-size:0.78rem;color:#F59E0B;">No video files found in backend/sample_videos/</span>';
     }
   } catch (err) {
-    samplePills.innerHTML = '<span style="font-size:0.8rem;color:#64748B;">Could not load samples</span>';
+    console.error('Fetch samples failed:', err);
+    samplePills.innerHTML = '<span style="font-size:0.78rem;color:#EF4444;">Backend offline. Run: <code>python backend/app.py</code></span>';
   }
 }
 
