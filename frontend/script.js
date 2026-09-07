@@ -3,8 +3,9 @@
 // ============================================================
 
 // Dynamic API Host Detection (attempts current hostname, 127.0.0.1, and localhost)
+const configuredApiBase = window.FORMIQ_CONFIG && window.FORMIQ_CONFIG.apiBase ? window.FORMIQ_CONFIG.apiBase : null;
 let activeApiHost = window.location.hostname && window.location.hostname !== '' ? window.location.hostname : '127.0.0.1';
-let API_BASE = `http://${activeApiHost}:5000/api`;
+let API_BASE = configuredApiBase || `http://${activeApiHost}:5000/api`;
 
 // DOM Elements
 const serverStatusDot = document.getElementById('serverStatusDot');
@@ -32,7 +33,14 @@ let selectedSampleName = null;
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', async () => {
-  await resolveWorkingApiHost();
+  if (configuredApiBase) {
+    API_BASE = configuredApiBase;
+    serverStatusDot.classList.add('pulse');
+    serverStatusText.textContent = 'API Ready';
+    serverStatusText.style.color = '#10B981';
+  } else {
+    await resolveWorkingApiHost();
+  }
   fetchSampleVideos();
   setupEventListeners();
 });
